@@ -1,0 +1,44 @@
+version: "3.9"
+services:
+  mongo:
+    image: mongo:6.0
+    container_name: communalis_mongo_dev
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.runCommand({ ping: 1 })"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: communalis_api_dev
+    depends_on:
+      mongo:
+        condition: service_healthy
+    environment:
+      NODE_ENV: development
+      PORT: 3000
+      MONGODB_URI: mongodb://mongo:27017/communalis
+      JWT_SECRET: dev_secret
+      CORS_ORIGINS: http://localhost:5173,http://localhost:3001
+      SMTP_HOST: smtp.mailtrap.io
+      SMTP_PORT: 587
+      SMTP_USER: ${SMTP_USER:-your_user}
+      SMTP_PASS: ${SMTP_PASS:-your_pass}
+      SMTP_FROM: "Communalis <no-reply@local.test>"
+    ports:
+      - "3000:3000"
+    volumes:
+      - uploads:/app/uploads
+    restart: unless-stopped
+
+volumes:
+  mongo_data:
+  uploads:
